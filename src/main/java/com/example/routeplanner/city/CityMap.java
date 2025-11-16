@@ -12,16 +12,30 @@ import java.util.Optional;
 @Component
 public class CityMap {
 
-    // You can tweak these if you want a bigger/smaller city.
+    public enum CellType {
+        ROAD,
+        BUILDING,
+        PARK,
+        RIVER
+    }
+
     public static final int CITY_WIDTH = 30;
     public static final int CITY_HEIGHT = 20;
 
     private final Grid grid;
     private final List<Restaurant> restaurants;
+    private final CellType[][] cellTypes;
 
     public CityMap() {
         this.grid = new Grid(CITY_WIDTH, CITY_HEIGHT);
         this.restaurants = new ArrayList<>();
+        this.cellTypes = new CellType[CITY_HEIGHT][CITY_WIDTH];
+
+        for (int y = 0; y < CITY_HEIGHT; y++) {
+            for (int x = 0; x < CITY_WIDTH; x++) {
+                cellTypes[y][x] = CellType.ROAD;
+            }
+        }
 
         setupTerrain();
         setupRestaurants();
@@ -33,17 +47,20 @@ public class CityMap {
         int riverX = 14;
         for (int y = 0; y < CITY_HEIGHT; y++) {
             grid.setObstacle(riverX, y, true);
+            cellTypes[y][riverX] = CellType.RIVER;
         }
 
         for (int x = 2; x <= 6; x++) {
             for (int y = 3; y <= 7; y++) {
                 grid.setObstacle(x, y, true);
+                cellTypes[y][x] = CellType.BUILDING;
             }
         }
 
         for (int x = 18; x <= 24; x++) {
             for (int y = 10; y <= 15; y++) {
                 grid.setObstacle(x, y, true);
+                cellTypes[y][x] = CellType.BUILDING;
             }
         }
 
@@ -51,10 +68,10 @@ public class CityMap {
         for (int x = 8; x <= 12; x++) {
             for (int y = 12; y <= 17; y++) {
                 grid.setWeight(x, y, 1.5); // slightly more expensive than normal roads
+                cellTypes[y][x] = CellType.PARK;
             }
         }
 
-        // 5) Make a couple of "fast roads" (lower weight, like main roads)
         for (int x = 0; x < CITY_WIDTH; x++) {
             grid.setWeight(x, 9, 0.8);  // horizontal main road
         }
@@ -80,6 +97,10 @@ public class CityMap {
     // Get an unmodifiable list of restaurants
     public List<Restaurant> getRestaurants() {
         return Collections.unmodifiableList(restaurants);
+    }
+
+    public CellType[][] getCellTypes() {
+        return cellTypes;
     }
 
     // Find a restaurant by its ID (case-insensitive)
