@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5ddc3de0-717b-48e1-b421-28f9727e6d88" name="Changes" comment="Init commit - new repo">
-      <change afterPath="$PROJECT_DIR$/src/test/java/RouteControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/example/routeplanner/controller/RouteController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/example/routeplanner/controller/RouteController.java" afterDir="false" />
-    </list>
+    <list default="true" id="5ddc3de0-717b-48e1-b421-28f9727e6d88" name="Changes" comment="Changes" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -60,7 +56,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1763058041706</updated>
-      <workItem from="1763058043722" duration="5546000" />
+      <workItem from="1763058043722" duration="5978000" />
     </task>
     <task id="LOCAL-00001" summary="Init commit - new repo">
       <option name="closed" value="true" />
@@ -70,7 +66,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763288625018</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Changes">
+      <option name="closed" value="true" />
+      <created>1763290533630</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1763290533630</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -78,6 +82,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Init commit - new repo" />
-    <option name="LAST_COMMIT_MESSAGE" value="Init commit - new repo" />
+    <MESSAGE value="Changes" />
+    <option name="LAST_COMMIT_MESSAGE" value="Changes" />
   </component>
 </project>
