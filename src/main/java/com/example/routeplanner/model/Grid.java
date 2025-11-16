@@ -1,12 +1,6 @@
 package com.example.routeplanner.model;
 
-/**
- * Internal representation of the grid used by the pathfinding algorithm.
- *
- * Now supports:
- * - weights (cost to enter a cell)
- * - obstacles (cells you cannot walk through)
- */
+
 public class Grid {
 
     private final int width;
@@ -38,43 +32,32 @@ public class Grid {
         return height;
     }
 
-    /**
-     * Check if coordinates are inside the grid.
-     */
+    //
+    // Check if coordinates are inside the grid.
     public boolean inBounds(int x, int y) {
         return x >= 0 && y >= 0 && x < width && y < height;
     }
 
-    /**
-     * Get the movement cost of entering a cell (x, y).
-     * Assumes the coordinates are in bounds.
-     */
+
+     // Get the movement cost of entering a cell
     public double getWeight(int x, int y) {
         return weights[y][x];
     }
 
-    /**
-     * Set the movement cost of entering a cell (x, y).
-     * Ignores calls that are out of bounds.
-     */
+    // Set the movement cost of entering a cell (x, y). And ignore the calls that are out of bounds.
     public void setWeight(int x, int y, double weight) {
         if (!inBounds(x, y)) return;
         if (weight <= 0) weight = 1.0; // keep it sane
         weights[y][x] = weight;
     }
 
-    /**
-     * Mark a cell as obstacle (true) or walkable (false).
-     * Ignores calls that are out of bounds.
-     */
+    // Mark a cell as obstacle (true) or walkable (false). Ignore the calls that are out of bounds.
     public void setObstacle(int x, int y, boolean isObstacle) {
         if (!inBounds(x, y)) return;
         obstacles[y][x] = isObstacle;
     }
 
-    /**
-     * Check if a cell is blocked.
-     */
+    // checks if a cell is blocked
     public boolean isObstacle(int x, int y) {
         if (!inBounds(x, y)) return true; // treat out-of-bounds as blocked
         return obstacles[y][x];

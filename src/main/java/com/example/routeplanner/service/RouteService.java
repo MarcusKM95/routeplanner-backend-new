@@ -69,7 +69,7 @@ public class RouteService {
         // Parse heuristic string, default to MANHATTAN if unknown
         Heuristic heuristic = parseHeuristic(request.heuristic());
 
-        // --- 2) Setup A* search structures ---
+        // Setup A* structures
         Node[][] nodes = new Node[height][width];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
@@ -96,7 +96,7 @@ public class RouteService {
                 {0, -1}
         };
 
-        // --- 3) Main A* loop ---
+        // Main A* loop
         while (!openSet.isEmpty()) {
             Node current = openSet.poll();
             if (current.isClosed()) {
@@ -142,7 +142,7 @@ public class RouteService {
         long endTimeNs = System.nanoTime();
         long timeMs = (endTimeNs - startTimeNs) / 1_000_000;
 
-        // --- 4) Reconstruct path ---
+        //Reconstruct path
         List<PointDTO> pathPoints = new ArrayList<>();
 
         if (!goalNode.isClosed()) {

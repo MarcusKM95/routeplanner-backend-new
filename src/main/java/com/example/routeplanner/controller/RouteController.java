@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*") // allow frontend on another port later
+@CrossOrigin(origins = "*")
 public class RouteController {
 
     private final RouteService routeService;
@@ -17,21 +17,6 @@ public class RouteController {
         this.routeService = routeService;
     }
 
-    /**
-     * Compute a single A -> B route on a grid using A*.
-     *
-     * POST /api/route
-     * Body example:
-     * {
-     *   "gridWidth": 20,
-     *   "gridHeight": 20,
-     *   "startX": 1,
-     *   "startY": 1,
-     *   "endX": 15,
-     *   "endY": 10,
-     *   "heuristic": "MANHATTAN"
-     * }
-     */
     @PostMapping("/route")
     public ResponseEntity<?> computeRoute(@RequestBody RouteRequest request) {
         try {
