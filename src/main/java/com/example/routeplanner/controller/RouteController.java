@@ -8,6 +8,7 @@ import com.example.routeplanner.dto.RouteFromRestaurantRequest;
 import com.example.routeplanner.dto.RouteRequest;
 import com.example.routeplanner.dto.RouteResponse;
 import com.example.routeplanner.service.RouteService;
+import com.example.routeplanner.strategy.DeliveryStrategyRegistry;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,10 +21,13 @@ public class RouteController {
 
     private final RouteService routeService;
     private final CityMap cityMap;
+    private final DeliveryStrategyRegistry deliveryStrategyRegistry;
 
-    public RouteController(RouteService routeService, CityMap cityMap) {
+
+    public RouteController(RouteService routeService, CityMap cityMap, DeliveryStrategyRegistry deliveryStrategyRegistry) {
         this.routeService = routeService;
         this.cityMap = cityMap;
+        this.deliveryStrategyRegistry = deliveryStrategyRegistry;
     }
 
     @PostMapping("/route")
@@ -94,9 +98,14 @@ public class RouteController {
             var restaurant = restaurantOpt.get();
             var grid = cityMap.getGrid();
             String heuristic = req.heuristic();
+            String strategyName = req.strategy();
+            var deliveryStrategy = deliveryStrategyRegistry.getStrategy(strategyName);
 
             int currentX = restaurant.x();
             int currentY = restaurant.y();
+
+            List<DeliveryStopDTO> orderedStops =
+                    deliveryStrategy.orderStops(req.stops(), currentX, currentY);
 
             List<PointDTO> fullPath = new java.util.ArrayList<>();
             double totalDistance = 0.0;
@@ -105,7 +114,7 @@ public class RouteController {
 
             boolean firstLeg = true;
 
-            for (DeliveryStopDTO stop : req.stops()) {
+            for (DeliveryStopDTO stop : orderedStops) {
                 int targetX = stop.x();
                 int targetY = stop.y();
 
