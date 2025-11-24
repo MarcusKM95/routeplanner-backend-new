@@ -11,7 +11,9 @@ import com.example.routeplanner.strategy.DeliveryStrategyRegistry;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CourierRouteService {
@@ -44,96 +46,224 @@ public class CourierRouteService {
             throw new IllegalArgumentException("Unknown courier id: " + courierId);
         }
 
-        List<Long> orderIds = courier.getAssignedOrderIds();
+        var orderIds = courier.getAssignedOrderIds();
         if (orderIds.isEmpty()) {
-            return new MultiStopRouteResponse(
-                    List.of(),
-                    0.0,
-                    0,
-                    0L
-            );
+            return new MultiStopRouteResponse(List.of(), 0.0, 0, 0L);
         }
 
-        // Load Order entities
+        // 1) Load Order entities
         List<Order> orders = new ArrayList<>(orderIds.size());
-        for (Long orderId : orderIds) {
-            orders.add(orderService.getOrderEntity(orderId));
+        for (Long id : orderIds) {
+            orders.add(orderService.getOrderEntity(id));
         }
 
-        // Build stops: For each order, first restaurant pickup, then customer delivery
-        List<DeliveryStopDTO> stops = new ArrayList<>(orders.size() * 2);
+        // 2) Group orders by restaurantId (preserve insertion order)
+        Map<String, List<Order>> byRestaurant = new LinkedHashMap<>();
+        for (Order o : orders) {
+            byRestaurant
+                    .computeIfAbsent(o.getRestaurantId(), k -> new ArrayList<>())
+                    .add(o);
+        }
 
-        for (Order order : orders) {
-            var restaurantOpt = cityMap.findRestaurantById(order.getRestaurantId());
-            if (restaurantOpt.isEmpty()) {
-                throw new IllegalStateException("Restaurant not found for order: " + order.getId());
+        // Helper class for our groups
+        class RestaurantGroup {
+            final CityMap.Restaurant restaurant;
+            final List<Order> orders;
+
+            RestaurantGroup(CityMap.Restaurant restaurant, List<Order> orders) {
+                this.restaurant = restaurant;
+                this.orders = orders;
             }
-            var restaurant = restaurantOpt.get();
-
-            // 1) Pickup stop
-            stops.add(new DeliveryStopDTO(
-                    restaurant.x(),
-                    restaurant.y(),
-                    "Pickup " + order.getLabel() + " at " + restaurant.name()
-            ));
-
-            // 2) Delivery stop
-            stops.add(new DeliveryStopDTO(
-                    order.getX(),
-                    order.getY(),
-                    "Deliver " + order.getLabel()
-            ));
         }
 
-        // Choose strategy
-        DeliveryStrategy strategy = deliveryStrategyRegistry.getStrategy(strategyName);
+        // 3) Build list of restaurant groups
+        List<RestaurantGroup> groups = new ArrayList<>();
+        for (Map.Entry<String, List<Order>> entry : byRestaurant.entrySet()) {
+            var restOpt = cityMap.findRestaurantById(entry.getKey());
+            if (restOpt.isEmpty()) {
+                throw new IllegalStateException("Unknown restaurant id: " + entry.getKey());
+            }
+            groups.add(new RestaurantGroup(restOpt.get(), entry.getValue()));
+        }
 
+        // 4) Prepare route accumulation
         int currentX = courier.getCurrentX();
         int currentY = courier.getCurrentY();
-
-        List<DeliveryStopDTO> orderedStops =
-                strategy.orderStops(stops, currentX, currentY);
 
         List<PointDTO> fullPath = new ArrayList<>();
         double totalDistance = 0.0;
         int totalVisitedNodes = 0;
         long totalTimeMs = 0L;
-
         boolean firstLeg = true;
 
-        for (DeliveryStopDTO stop : orderedStops) {
+        // Remaining restaurant groups to visit
+        List<RestaurantGroup> remainingGroups = new ArrayList<>(groups);
 
-            var leg = routeService.computeRouteOnGrid(
-                    cityMap.getGrid(),     // your real grid access
-                    currentX,
-                    currentY,
-                    stop.x(),
-                    stop.y(),
-                    heuristic
-            );
+        // 5) Visit each restaurant group
+        while (!remainingGroups.isEmpty()) {
 
-            totalVisitedNodes += leg.visitedNodes();
-            totalTimeMs += leg.timeMs();
+            // 5a) Choose next restaurant group according to strategy
+            RestaurantGroup nextGroup;
 
-            if (!Double.isFinite(leg.totalDistance()) || leg.path().isEmpty()) {
-                totalDistance = Double.POSITIVE_INFINITY;
-                break;
-            }
+            if ("NEAREST_NEIGHBOR".equalsIgnoreCase(strategyName)) {
+                double bestDist = Double.POSITIVE_INFINITY;
+                RestaurantGroup bestGroup = null;
 
-            totalDistance += leg.totalDistance();
+                for (RestaurantGroup g : remainingGroups) {
+                    var legToRest = routeService.computeRouteOnGrid(
+                            cityMap.getGrid(),
+                            currentX, currentY,
+                            g.restaurant.x(), g.restaurant.y(),
+                            heuristic
+                    );
 
-            if (firstLeg) {
-                fullPath.addAll(leg.path());
-                firstLeg = false;
-            } else {
-                for (int i = 1; i < leg.path().size(); i++) {
-                    fullPath.add(leg.path().get(i));
+                    if (!Double.isFinite(legToRest.totalDistance()) || legToRest.path().isEmpty()) {
+                        continue; // can't reach this restaurant
+                    }
+
+                    if (legToRest.totalDistance() < bestDist) {
+                        bestDist = legToRest.totalDistance();
+                        bestGroup = g;
+                    }
                 }
+
+                if (bestGroup == null) {
+                    // cannot reach remaining restaurants -> route fails
+                    return new MultiStopRouteResponse(
+                            fullPath,
+                            Double.POSITIVE_INFINITY,
+                            totalVisitedNodes,
+                            totalTimeMs
+                    );
+                }
+
+                nextGroup = bestGroup;
+
+            } else {
+                // IN_ORDER or unknown => take next in insertion order
+                nextGroup = remainingGroups.get(0);
             }
 
-            // Move start to this stop
-            currentX = stop.x();
-            currentY = stop.y();
+            // 5b) Go from current position to that restaurant (pickup)
+            if (currentX != nextGroup.restaurant.x() || currentY != nextGroup.restaurant.y()) {
+                var legToRest = routeService.computeRouteOnGrid(
+                        cityMap.getGrid(),
+                        currentX, currentY,
+                        nextGroup.restaurant.x(), nextGroup.restaurant.y(),
+                        heuristic
+                );
+
+                totalVisitedNodes += legToRest.visitedNodes();
+                totalTimeMs += legToRest.timeMs();
+
+                if (!Double.isFinite(legToRest.totalDistance()) || legToRest.path().isEmpty()) {
+                    return new MultiStopRouteResponse(
+                            fullPath,
+                            Double.POSITIVE_INFINITY,
+                            totalVisitedNodes,
+                            totalTimeMs
+                    );
+                }
+
+                totalDistance += legToRest.totalDistance();
+
+                if (firstLeg) {
+                    fullPath.addAll(legToRest.path());
+                    firstLeg = false;
+                } else {
+                    // avoid duplicating joint node
+                    for (int i = 1; i < legToRest.path().size(); i++) {
+                        fullPath.add(legToRest.path().get(i));
+                    }
+                }
+
+                currentX = nextGroup.restaurant.x();
+                currentY = nextGroup.restaurant.y();
+            }
+
+            // From this restaurant, deliver to ALL its customers
+            List<Order> remainingOrdersForRest = new ArrayList<>(nextGroup.orders);
+
+            while (!remainingOrdersForRest.isEmpty()) {
+                Order nextOrder;
+
+                if ("NEAREST_NEIGHBOR".equalsIgnoreCase(strategyName)) {
+                    double bestDist = Double.POSITIVE_INFINITY;
+                    Order bestOrder = null;
+
+                    for (Order o : remainingOrdersForRest) {
+                        var legToCustomer = routeService.computeRouteOnGrid(
+                                cityMap.getGrid(),
+                                currentX, currentY,
+                                o.getX(), o.getY(),
+                                heuristic
+                        );
+
+                        if (!Double.isFinite(legToCustomer.totalDistance()) || legToCustomer.path().isEmpty()) {
+                            continue;
+                        }
+
+                        if (legToCustomer.totalDistance() < bestDist) {
+                            bestDist = legToCustomer.totalDistance();
+                            bestOrder = o;
+                        }
+                    }
+
+                    if (bestOrder == null) {
+                        // can't reach remaining customers of this restaurant
+                        return new MultiStopRouteResponse(
+                                fullPath,
+                                Double.POSITIVE_INFINITY,
+                                totalVisitedNodes,
+                                totalTimeMs
+                        );
+                    }
+
+                    nextOrder = bestOrder;
+
+                } else {
+                    // IN_ORDER: keep insertion order of orders
+                    nextOrder = remainingOrdersForRest.get(0);
+                }
+
+                // Leg: current -> that customer
+                var legToCustomer = routeService.computeRouteOnGrid(
+                        cityMap.getGrid(),
+                        currentX, currentY,
+                        nextOrder.getX(), nextOrder.getY(),
+                        heuristic
+                );
+
+                totalVisitedNodes += legToCustomer.visitedNodes();
+                totalTimeMs += legToCustomer.timeMs();
+
+                if (!Double.isFinite(legToCustomer.totalDistance()) || legToCustomer.path().isEmpty()) {
+                    return new MultiStopRouteResponse(
+                            fullPath,
+                            Double.POSITIVE_INFINITY,
+                            totalVisitedNodes,
+                            totalTimeMs
+                    );
+                }
+
+                totalDistance += legToCustomer.totalDistance();
+
+                if (firstLeg) {
+                    fullPath.addAll(legToCustomer.path());
+                    firstLeg = false;
+                } else {
+                    for (int i = 1; i < legToCustomer.path().size(); i++) {
+                        fullPath.add(legToCustomer.path().get(i));
+                    }
+                }
+
+                currentX = nextOrder.getX();
+                currentY = nextOrder.getY();
+                remainingOrdersForRest.remove(nextOrder);
+            }
+
+            // Done with this restaurant group
+            remainingGroups.remove(nextGroup);
         }
 
         return new MultiStopRouteResponse(
