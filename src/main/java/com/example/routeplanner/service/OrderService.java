@@ -99,4 +99,19 @@ public class OrderService {
                 order.getAssignedCourierId()
         );
     }
+
+    public void markOrdersDeliveredForCourier(String courierId) {
+        if (courierId == null) return;
+
+        for (Order order : orders.values()) {
+            if (courierId.equals(order.getAssignedCourierId())) {
+                if (order.getStatus() == OrderStatus.ASSIGNED ||
+                        order.getStatus() == OrderStatus.IN_PROGRESS) {
+
+                    order.setStatus(OrderStatus.DELIVERED);
+                }
+            }
+        }
+    }
+
 }

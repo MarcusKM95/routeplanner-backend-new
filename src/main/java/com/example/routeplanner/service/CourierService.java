@@ -13,8 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CourierService {
 
     private final ConcurrentHashMap<String, Courier> couriers = new ConcurrentHashMap<>();
+    private final OrderService orderService;
 
-    public CourierService(CityMap cityMap) {
+    public CourierService(CityMap cityMap, OrderService orderService) {
+        this.orderService = orderService;
 
         //manually seed some couriers at good positions on the map
         couriers.put("c1", new Courier("c1", "Anna", 1, 4));
@@ -71,12 +73,19 @@ public class CourierService {
         // Remove it from the route
         route.remove(0);
 
-        // If courier arrived at the stop
         if (route.isEmpty()) {
-            // ✔ TODO later: pick up order or deliver it.
-            // For now do nothing — just stop moving.
+
+            // Mark all their assigned orders as DELIVERED
+            orderService.markOrdersDeliveredForCourier(courier.getId());
+
+            // Clear the courier’s assigned order list
+            courier.getAssignedOrderIds().clear();
+
+            // Clear the active route
+            courier.setActiveRoute(List.of());
         }
     }
-
-
 }
+
+
+
