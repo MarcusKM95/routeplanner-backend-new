@@ -3,6 +3,8 @@ package com.example.routeplanner.service;
 import com.example.routeplanner.dto.CourierDTO;
 import com.example.routeplanner.dto.OrderAssignmentDTO;
 import com.example.routeplanner.dto.OrderDTO;
+import com.example.routeplanner.dto.MultiStopRouteResponse;
+import com.example.routeplanner.dto.PointDTO;
 import com.example.routeplanner.model.Courier;
 import com.example.routeplanner.model.Order;
 import com.example.routeplanner.model.OrderStatus;
@@ -10,16 +12,22 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+
 @Service
 public class DispatchService {
 
     private final OrderService orderService;
     private final CourierService courierService;
+    private final CourierRouteService courierRouteService;
 
-    public DispatchService(OrderService orderService, CourierService courierService) {
+    public DispatchService(OrderService orderService,
+                           CourierService courierService,
+                           CourierRouteService courierRouteService) {
         this.orderService = orderService;
         this.courierService = courierService;
+        this.courierRouteService = courierRouteService;
     }
+
 
     // Assign the given order to the best courier based on Manhattan distance
     public OrderAssignmentDTO assignOrderToBestCourier(long orderId) {
@@ -61,6 +69,19 @@ public class DispatchService {
         bestCourier.assignOrder(order.getId());
         order.setAssignedCourierId(bestCourier.getId());
         order.setStatus(OrderStatus.ASSIGNED);
+
+        MultiStopRouteResponse route =
+                courierRouteService.computeRouteForCourier(
+                        bestCourier.getId(),
+                        "MANHATTAN",          // heuristic
+                        "IN_ORDER"            // delivery strategy
+                );
+
+        List<int[]> steps = route.path().stream()
+                .map(p -> new int[]{p.x(), p.y()})
+                .toList();
+
+        bestCourier.setActiveRoute(steps);
 
         // Convert to DTOs for response
         OrderDTO orderDTO = orderService.getOrder(order.getId());

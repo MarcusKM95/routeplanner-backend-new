@@ -17,7 +17,7 @@ public class CourierService {
     public CourierService(CityMap cityMap) {
 
         //manually seed some couriers at good positions on the map
-        couriers.put("c1", new Courier("c1", "Anna", 3, 4));
+        couriers.put("c1", new Courier("c1", "Anna", 1, 4));
         couriers.put("c2", new Courier("c2", "Jamal", 10, 10));
         couriers.put("c3", new Courier("c3", "Sofie", 20, 6));
     }
@@ -51,5 +51,32 @@ public class CourierService {
     public List<Courier> listCourierEntities() {
         return couriers.values().stream().toList();
     }
+
+    // Move all couriers one step along their active route
+    public void stepAllCouriers() {
+        for (Courier courier : couriers.values()) {
+            stepCourier(courier);
+        }
+    }
+
+    private void stepCourier(Courier courier) {
+        List<int[]> route = courier.getActiveRoute();
+        if (route == null || route.isEmpty()) return;
+
+        // Take the next tile
+        int[] next = route.get(0);
+        courier.setCurrentX(next[0]);
+        courier.setCurrentY(next[1]);
+
+        // Remove it from the route
+        route.remove(0);
+
+        // If courier arrived at the stop
+        if (route.isEmpty()) {
+            // ✔ TODO later: pick up order or deliver it.
+            // For now do nothing — just stop moving.
+        }
+    }
+
 
 }

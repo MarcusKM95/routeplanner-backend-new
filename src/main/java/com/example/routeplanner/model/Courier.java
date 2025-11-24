@@ -53,4 +53,15 @@ public class Courier {
     public void assignOrder(long orderId) {
         assignedOrderIds.add(orderId);
     }
+
+    private List<int[]> activeRoute = new ArrayList<>();
+
+    public List<int[]> getActiveRoute() {
+        return activeRoute;
+    }
+
+    public void setActiveRoute(List<int[]> activeRoute) {
+        this.activeRoute = activeRoute != null ? new ArrayList<>(activeRoute) : new ArrayList<>();
+    }
+
 }

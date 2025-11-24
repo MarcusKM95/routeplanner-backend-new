@@ -44,49 +44,91 @@ public class CityMap {
     // Set up obstacles and weights in the city grid.
     private void setupTerrain() {
 
-        int riverX = 14;
+
+        //horizontal river across the map
+        int riverY = 8;
+        for (int x = 0; x < CITY_WIDTH; x++) {
+            grid.setObstacle(x, riverY, true);
+            cellTypes[riverY][x] = CellType.RIVER;
+        }
+
+        // Two bridges across the river
+        grid.setObstacle(7, riverY, false);
+        cellTypes[riverY][7] = CellType.ROAD;
+
+        grid.setObstacle(20, riverY, false);
+        cellTypes[riverY][20] = CellType.ROAD;
+
+        // Building blocks left
+        addBuildingBlock(2, 5, 6, 8);
+        addBuildingBlock(2, 10, 7, 15);
+
+        //Building blocks right
+        addBuildingBlock(18, 2, 24, 5);
+        addBuildingBlock(18, 11, 24, 17);
+
+        // Add parks (slower, but walkable)
+        addParkBlock(10, 2, 14, 6);
+        addParkBlock(10, 12, 14, 16);
+
+        // Add Major roads
         for (int y = 0; y < CITY_HEIGHT; y++) {
-            grid.setObstacle(riverX, y, true);
-            cellTypes[y][riverX] = CellType.RIVER;
-        }
-
-        for (int x = 2; x <= 6; x++) {
-            for (int y = 3; y <= 7; y++) {
-                grid.setObstacle(x, y, true);
-                cellTypes[y][x] = CellType.BUILDING;
-            }
-        }
-
-        for (int x = 18; x <= 24; x++) {
-            for (int y = 10; y <= 15; y++) {
-                grid.setObstacle(x, y, true);
-                cellTypes[y][x] = CellType.BUILDING;
-            }
-        }
-
-        // Make a park area with higher movement cost (e.g., grass paths)
-        for (int x = 8; x <= 12; x++) {
-            for (int y = 12; y <= 17; y++) {
-                grid.setWeight(x, y, 1.5); // slightly more expensive than normal roads
-                cellTypes[y][x] = CellType.PARK;
+            if (y != 8) {
+                grid.setObstacle(5, y, false);
+                grid.setWeight(5, y, 0.7);
+                cellTypes[y][5] = CellType.ROAD;
             }
         }
 
         for (int x = 0; x < CITY_WIDTH; x++) {
-            grid.setWeight(x, 9, 0.8);  // horizontal main road
+            grid.setObstacle(x, 4, false);
+            grid.setWeight(x, 4, 0.7);
+            cellTypes[4][x] = CellType.ROAD;
         }
-        for (int y = 0; y < CITY_HEIGHT; y++) {
-            grid.setWeight(5, y, 0.8);  // vertical main road
+
+    }
+    // Helpers to add a building block
+
+    private void addBuildingBlock(int x1, int y1, int x2, int y2) {
+        for (int x = x1; x <= x2; x++) {
+            for (int y = y1; y <= y2; y++) {
+                grid.setObstacle(x, y, true);
+                cellTypes[y][x] = CellType.BUILDING;
+            }
         }
     }
 
-    // Set up restaurants at fixed locations.
-    private void setupRestaurants() {
-        // NOTE: Make sure these coordinates are not on obstacles.
-        restaurants.add(new Restaurant("pizzaplanet", "Pizza Planet", 4, 8));
-        restaurants.add(new Restaurant("sushihouse", "Sushi House", 20, 5));
-        restaurants.add(new Restaurant("burgerworld", "Burger World", 10, 16));
+    private void addParkBlock(int x1, int y1, int x2, int y2) {
+        for (int x = x1; x <= x2; x++) {
+            for (int y = y1; y <= y2; y++) {
+                grid.setWeight(x, y, 1.4);
+                cellTypes[y][x] = CellType.PARK;
+            }
+        }
     }
+
+
+    private void setupRestaurants() {
+
+        restaurants.clear();
+
+        restaurants.add(new Restaurant(
+                "pizzaplanet", "Pizza Planet",
+                5, 4
+        ));
+
+        restaurants.add(new Restaurant(
+                "sushihouse", "Sushi House",
+                15, 4
+        ));
+
+        restaurants.add(new Restaurant(
+                "burgerworld", "Burger World",
+                20, 10
+        ));
+    }
+
+
 
     // Get the city grid.
 
@@ -119,4 +161,5 @@ public class CityMap {
             int y
     ) {
     }
+
 }
